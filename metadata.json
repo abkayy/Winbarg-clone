@@ -1,0 +1,6 @@
+{
+  "name": "Winbarg Homes",
+  "description": "Premium construction and real estate development solutions website with showcase, services, blog, portfolio, and admin portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

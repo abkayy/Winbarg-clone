@@ -1,0 +1,198 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.size() > 0 && email.size() < 200 && email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$');
+    }
+
+    function isValidSubscriberCreate() {
+      return request.resource.data.keys().hasOnly(['email', 'createdAt'])
+        && isValidEmail(request.resource.data.email);
+    }
+
+    function isValidContactMessage() {
+      return request.resource.data.keys().hasOnly([
+        'fullName',
+        'email',
+        'projectType',
+        'budget',
+        'messageDetails',
+        'read',
+        'createdAt',
+      ])
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() > 0
+        && isValidEmail(request.resource.data.email)
+        && request.resource.data.projectType is string
+        && request.resource.data.projectType.size() > 0
+        && request.resource.data.budget is string
+        && request.resource.data.budget.size() > 0
+        && request.resource.data.messageDetails is string
+        && request.resource.data.messageDetails.size() > 0
+        && request.resource.data.read is bool;
+    }
+
+    function isOptionalString(fieldName) {
+      return !(fieldName in request.resource.data) || request.resource.data[fieldName] is string;
+    }
+
+    function isOptionalStringList(fieldName) {
+      return !(fieldName in request.resource.data) || request.resource.data[fieldName] is list;
+    }
+
+    function isValidTeamMember() {
+      return request.resource.data.keys().hasOnly([
+        'name',
+        'role',
+        'bio',
+        'experience',
+        'projects',
+        'status',
+        'professionalBiography',
+        'coreExpertise',
+        'linkedinUrl',
+        'imageUrl',
+        'order',
+      ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && isOptionalString('role')
+        && isOptionalString('bio')
+        && isOptionalString('experience')
+        && isOptionalString('projects')
+        && isOptionalString('status')
+        && isOptionalString('professionalBiography')
+        && isOptionalStringList('coreExpertise')
+        && isOptionalString('linkedinUrl')
+        && request.resource.data.order is int
+        && request.resource.data.order >= 0;
+    }
+
+    function isValidTeamMemberCreate() {
+      return isValidTeamMember();
+    }
+
+    function isValidTeamMemberUpdate() {
+      return isValidTeamMember();
+    }
+
+    function isValidProject() {
+      return request.resource.data.keys().hasOnly([
+        'title',
+        'category',
+        'location',
+        'description',
+        'keyChallenges',
+        'sustainableFeatures',
+        'client',
+        'completionDate',
+        'featured',
+        'featuredImage',
+        'images',
+      ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && isOptionalString('category')
+        && isOptionalString('location')
+        && isOptionalString('description')
+        && isOptionalStringList('keyChallenges')
+        && isOptionalStringList('sustainableFeatures')
+        && isOptionalString('client')
+        && isOptionalString('completionDate')
+        && request.resource.data.featured is bool
+        && isOptionalString('featuredImage')
+        && isOptionalStringList('images');
+    }
+
+    function isValidProjectCreate() {
+      return isValidProject();
+    }
+
+    function isValidProjectUpdate() {
+      return isValidProject();
+    }
+
+    function isValidBlog() {
+      return request.resource.data.keys().hasOnly([
+        'title',
+        'slug',
+        'excerpt',
+        'content',
+        'author',
+        'date',
+        'readTime',
+        'category',
+        'featured',
+        'published',
+        'coverImage',
+        'createdAt',
+        'updatedAt',
+      ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.slug is string
+        && request.resource.data.slug.size() > 0
+        && request.resource.data.excerpt is string
+        && request.resource.data.excerpt.size() > 0
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.author is string
+        && request.resource.data.author.size() > 0
+        && request.resource.data.date is string
+        && request.resource.data.readTime is string
+        && request.resource.data.category is string
+        && request.resource.data.category.size() > 0
+        && request.resource.data.featured is bool
+        && request.resource.data.published is bool;
+    }
+
+    // Public-readable collections
+    match /projects/{projectId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidProjectCreate();
+      allow update: if isAuthenticated() && isValidProjectUpdate();
+      allow delete: if isAuthenticated();
+    }
+
+    match /blogs/{blogId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidBlog();
+      allow update: if isAuthenticated() && isValidBlog();
+      allow delete: if isAuthenticated();
+    }
+
+    match /teamMembers/{memberId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidTeamMemberCreate();
+      allow update: if isAuthenticated() && isValidTeamMemberUpdate();
+      allow delete: if isAuthenticated();
+    }
+
+    // Contact messages: public create, admin read/update/delete
+    match /contactMessages/{messageId} {
+      allow create: if isValidContactMessage();
+      allow read, update, delete: if isAuthenticated();
+    }
+
+    // Newsletter subscribers: public create, admin read/delete
+    match /subscribers/{subscriberId} {
+      allow create: if isValidSubscriberCreate();
+      allow read, delete: if isAuthenticated();
+    }
+
+    // Site settings: public read, admin write
+    match /settings/{document} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

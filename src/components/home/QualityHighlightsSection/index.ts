@@ -1,0 +1,1 @@
+export { QualityHighlightsSection } from "./QualityHighlightsSection";
